@@ -1,0 +1,7 @@
+RewriteEngine On
+
+# Redirect root to login page
+RewriteRule ^$ login.php [L,R=301]
+
+# Redirect index.php to login page
+RewriteRule ^index\.php$ login.php [L,R=301]
