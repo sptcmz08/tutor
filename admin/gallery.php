@@ -85,6 +85,15 @@ include __DIR__ . '/layout.php';
                             title="ดาวน์โหลดรูปทั้งหมดของ <?= sanitize($schoolName) ?>">
                             <i class="fas fa-download mr-1"></i> โหลดทั้งหมด
                         </a>
+                        <?php $schoolPhotoCount = array_sum(array_map('count', $dates)); ?>
+                        <form method="POST" action="<?= BASE_URL ?>/admin/clear_photos.php" class="inline"
+                            onsubmit="return confirm('🗑️ ต้องการลบรูปทั้งหมดของ <?= sanitize($schoolName) ?> (<?= $schoolPhotoCount ?> รูป)?\n\nการดำเนินการนี้ไม่สามารถย้อนกลับได้')">
+                            <input type="hidden" name="school" value="<?= sanitize($schoolName) ?>">
+                            <button type="submit" class="px-3 py-1.5 bg-red-50 text-red-500 rounded-lg text-xs font-medium hover:bg-red-100 transition-colors"
+                                title="ลบรูปทั้งหมดของ <?= sanitize($schoolName) ?>">
+                                <i class="fas fa-trash mr-1"></i> ลบทั้งหมด
+                            </button>
+                        </form>
                     </div>
 
                     <?php foreach ($dates as $date => $datePhotos): ?>
@@ -101,6 +110,15 @@ include __DIR__ . '/layout.php';
                                         title="ดาวน์โหลดรูปวันนี้">
                                         <i class="fas fa-download"></i>
                                     </a>
+                                    <form method="POST" action="<?= BASE_URL ?>/admin/clear_photos.php" class="inline"
+                                        onsubmit="return confirm('🗑️ ลบรูปวันที่ <?= $date ?> ของ <?= sanitize($schoolName) ?> (<?= count($datePhotos) ?> รูป)?')">
+                                        <input type="hidden" name="school" value="<?= sanitize($schoolName) ?>">
+                                        <input type="hidden" name="date" value="<?= $date ?>">
+                                        <button type="submit" class="px-2 py-1 bg-red-50 text-red-500 rounded text-xs hover:bg-red-100 transition-colors"
+                                            title="ลบรูปวันนี้">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
                                 </div>
                             </div>
                             <div class="p-4">

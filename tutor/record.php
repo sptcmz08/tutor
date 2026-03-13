@@ -8,7 +8,13 @@ $tutor = getCurrentTutor();
 $schools = getSchools(true);
 
 $errors = [];
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+// Detect PHP post_max_size overflow — when exceeded, PHP silently empties $_POST and $_FILES
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST) && empty($_FILES)) {
+    $errors[] = 'ไฟล์รูปภาพมีขนาดรวมใหญ่เกินไป กรุณาลดจำนวนรูปหรือลดขนาดรูปแล้วลองใหม่';
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST)) {
     $schoolId = (int) ($_POST['school_id'] ?? 0);
     $teachingDate = $_POST['teaching_date'] ?? '';
     $startTime = $_POST['start_time'] ?? '';
@@ -257,11 +263,21 @@ include __DIR__ . '/layout.php';
 
     function handleFiles(input) {
         const files = input.files;
+        let skipped = [];
         for (let i = 0; i < files.length; i++) {
-            collectedFiles.push(files[i]);
+            const f = files[i];
+            // Filter out videos / Live Photos
+            if (f.type && !f.type.startsWith('image/')) {
+                skipped.push(f.name + ' (ไม่ใช่รูปภาพ — อาจเป็น Live Photo)');
+                continue;
+            }
+            collectedFiles.push(f);
         }
         // Reset input so the same file can be selected again
         input.value = '';
+        if (skipped.length > 0) {
+            alert('ไฟล์ต่อไปนี้ถูกข้ามไป:\n\n' + skipped.join('\n') + '\n\n💡 ถ้าเป็น Live Photo → ปิด Live Photo แล้วถ่ายใหม่ หรือบันทึกเป็นรูปภาพปกติก่อนเลือก');
+        }
         renderPreviews();
     }
 
@@ -345,13 +361,18 @@ include __DIR__ . '/layout.php';
             fd.append('photos[]', collectedFiles[i]);
         }
 
+        // Calculate total size
+        let totalSize = 0;
+        for (let i = 0; i < collectedFiles.length; i++) totalSize += collectedFiles[i].size;
+        const totalMB = (totalSize / 1024 / 1024).toFixed(1);
+
         // Show loading overlay
         const overlay = document.getElementById('uploadingOverlay');
         overlay.classList.remove('hidden');
         overlay.classList.add('flex');
         document.getElementById('submitBtn').disabled = true;
         document.getElementById('uploadProgress').textContent =
-            'กำลังอัพโหลด ' + collectedFiles.length + ' รูป...';
+            'กำลังอัพโหลด ' + collectedFiles.length + ' รูป (' + totalMB + ' MB)...';
 
         try {
             const response = await fetch(window.location.href, {

@@ -38,6 +38,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         } else {
             echo json_encode(['success' => false, 'error' => 'ข้อมูลไม่ครบถ้วน']);
         }
+    } elseif ($_POST['action'] === 'delete_record') {
+        $recordId = (int)($_POST['record_id'] ?? 0);
+        if ($recordId) {
+            // Delete physical photo files first
+            $photoStmt = $db->prepare("SELECT photo_path FROM teaching_photos WHERE record_id = ?");
+            $photoStmt->execute([$recordId]);
+            $photos = $photoStmt->fetchAll(PDO::FETCH_COLUMN);
+            foreach ($photos as $photoPath) {
+                $fullPath = UPLOAD_DIR . '/' . $photoPath;
+                if (file_exists($fullPath)) unlink($fullPath);
+            }
+            // Delete DB records (photos cascade via FK)
+            $stmt = $db->prepare("DELETE FROM teaching_records WHERE id = ?");
+            $stmt->execute([$recordId]);
+            echo json_encode(['success' => true]);
+        } else {
+            echo json_encode(['success' => false, 'error' => 'ไม่พบรายการ']);
+        }
     }
     exit;
 }
@@ -249,10 +267,14 @@ include __DIR__ . '/layout.php';
                                            placeholder="0"
                                            onchange="saveFee(this)">
                                 </td>
-                                <td class="px-3 py-3 text-center">
+                                <td class="px-3 py-3 text-center whitespace-nowrap">
                                     <button type="button" onclick='openEditRecord(<?= json_encode($r, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)'
                                         class="p-1.5 text-slate-400 hover:text-indigo-500 transition-colors" title="แก้ไข">
                                         <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button type="button" onclick="deleteRecord(<?= $r['id'] ?>, '<?= sanitize($r['school_name']) ?> - <?= formatThaiDate($r['teaching_date']) ?>')"
+                                        class="p-1.5 text-slate-400 hover:text-red-500 transition-colors" title="ลบ">
+                                        <i class="fas fa-trash"></i>
                                     </button>
                                 </td>
                             </tr>
@@ -438,6 +460,25 @@ function saveEditRecord() {
 document.getElementById('editRecordModal').addEventListener('click', function(e) {
     if (e.target === this) closeEditModal();
 });
+
+function deleteRecord(recordId, label) {
+    if (!confirm('🗑️ ต้องการลบรายการนี้?\n\n' + label + '\n\nรูปภาพทั้งหมดจะถูกลบด้วย การดำเนินการนี้ไม่สามารถย้อนกลับได้')) return;
+
+    fetch(window.location.pathname + window.location.search, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'action=delete_record&record_id=' + recordId
+    })
+    .then(r => r.json())
+    .then(result => {
+        if (result.success) {
+            showToast('ลบรายการเรียบร้อย');
+            setTimeout(() => window.location.reload(), 500);
+        } else {
+            alert(result.error || 'เกิดข้อผิดพลาด');
+        }
+    });
+}
 
 document.addEventListener('keydown', function(e) { if (e.key === 'Escape') { closeLightbox(); closeEditModal(); } });
 </script>

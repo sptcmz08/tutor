@@ -30,7 +30,13 @@ $photoStmt->execute([$recordId]);
 $existingPhotos = $photoStmt->fetchAll();
 
 $errors = [];
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+// Detect PHP post_max_size overflow
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST) && empty($_FILES)) {
+    $errors[] = 'ไฟล์รูปภาพมีขนาดรวมใหญ่เกินไป กรุณาลดจำนวนรูปหรือลดขนาดรูปแล้วลองใหม่';
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST)) {
     $schoolId = (int) ($_POST['school_id'] ?? 0);
     $teachingDate = $_POST['teaching_date'] ?? '';
     $startTime = $_POST['start_time'] ?? '';
@@ -281,10 +287,19 @@ include __DIR__ . '/layout.php';
 
     function handleFiles(input) {
         const files = input.files;
+        let skipped = [];
         for (let i = 0; i < files.length; i++) {
-            collectedFiles.push(files[i]);
+            const f = files[i];
+            if (f.type && !f.type.startsWith('image/')) {
+                skipped.push(f.name + ' (ไม่ใช่รูปภาพ — อาจเป็น Live Photo)');
+                continue;
+            }
+            collectedFiles.push(f);
         }
         input.value = '';
+        if (skipped.length > 0) {
+            alert('ไฟล์ต่อไปนี้ถูกข้ามไป:\n\n' + skipped.join('\n') + '\n\n💡 ถ้าเป็น Live Photo → ปิด Live Photo แล้วถ่ายใหม่ หรือบันทึกเป็นรูปภาพปกติก่อนเลือก');
+        }
         renderPreviews();
     }
 

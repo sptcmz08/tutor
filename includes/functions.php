@@ -43,9 +43,6 @@ function uploadPhoto($file, $schoolName, $teachingDate)
         return ['success' => false, 'error' => 'ไม่มีไฟล์ที่อัพโหลด'];
     }
 
-    if ($file['size'] > MAX_FILE_SIZE) {
-        return ['success' => false, 'error' => 'ไฟล์มีขนาดเกิน 10MB'];
-    }
 
     $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
     if (!in_array($ext, ALLOWED_EXTENSIONS)) {
